@@ -1,0 +1,13 @@
+# uv / lock (이미지 빌드 중 생성)
+requirements.lock
+
+# 배포용 SSH 키 (절대 커밋 금지)
+airflow-deploy-key
+airflow-deploy-key.pub
+*.pem
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
