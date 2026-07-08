@@ -1,0 +1,15 @@
+[project]
+name = "airflow-k8s-practice"
+version = "0.1.0"
+description = "Custom Airflow image dependencies for the airflow-k8s-practice lab"
+# 베이스 이미지(apache/airflow)의 Python 버전과 반드시 일치시킨다.
+requires-python = "==3.12.*"
+
+# 주의: apache-airflow 자체는 여기에 넣지 않는다.
+#   - airflow는 베이스 이미지에 이미 정확한 버전으로 설치되어 있고,
+#   - 버전은 Dockerfile의 constraints 파일이 고정한다.
+# 여기에는 "추가로 필요한 라이브러리/provider"만 선언한다.
+dependencies = [
+  "apache-airflow-providers-cncf-kubernetes",
+  "pandas",
+]
