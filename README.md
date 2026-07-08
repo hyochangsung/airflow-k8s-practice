@@ -93,15 +93,50 @@ airflow-k8s-practice/
 
 ## ✅ 사전 준비 (Prerequisites)
 
-| 도구 | 용도 | 설치 |
-| --- | --- | --- |
-| Docker Desktop | 컨테이너 런타임 | https://www.docker.com/products/docker-desktop |
-| k3d | 로컬 k8s 클러스터 | `brew install k3d` |
-| kubectl | k8s CLI | `brew install kubectl` |
-| helm | k8s 패키지 매니저 | `brew install helm` |
+| 도구 | 용도 |
+| --- | --- |
+| Docker Desktop | 컨테이너 런타임 |
+| k3d | 로컬 k8s 클러스터 |
+| kubectl | k8s CLI |
+| helm | k8s 패키지 매니저 |
+
+> 아래 실행 명령(Step 1~7)은 OS에 상관없이 동일하다. **설치 방법만** OS별로 다르다.
+
+<details open>
+<summary><b>🍎 macOS</b> (Homebrew)</summary>
 
 ```bash
-# 설치 확인
+# Docker Desktop 설치 후 실행
+open -a Docker
+
+# 나머지 도구
+brew install k3d kubectl helm
+```
+</details>
+
+<details>
+<summary><b>🪟 Windows</b> (winget + Docker Desktop / WSL2)</summary>
+
+- **Docker Desktop**: [공식 사이트](https://www.docker.com/products/docker-desktop)에서 설치하고 실행한다.
+  설정에서 **WSL2 backend**를 켜는 것을 권장한다(k3d가 WSL2 위에서 가장 안정적으로 동작).
+
+```powershell
+# PowerShell (winget)
+winget install -e --id Kubernetes.kubectl
+winget install -e --id Helm.Helm
+
+# k3d 설치 (PowerShell)
+choco install k3d      # Chocolatey가 있으면
+# 또는 WSL2(Ubuntu) 터미널에서:
+#   curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+```
+
+> 💡 Windows에서는 **WSL2(Ubuntu) 터미널 안에서** 이후 명령을 실행하는 것을 권장한다.
+> Docker Desktop이 WSL2와 연동되어 있으면 WSL2 안에서 `docker`, `k3d`가 그대로 동작한다.
+</details>
+
+```bash
+# 설치 확인 (공통)
 docker version && k3d version && kubectl version --client && helm version
 ```
 
