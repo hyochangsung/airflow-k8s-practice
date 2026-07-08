@@ -1,0 +1,102 @@
+# =============================================================================
+# Apache Airflow 공식 Helm chart values (airflow-k8s-practice 랩)
+#
+# 이 파일은 공식 차트(apache-airflow/airflow)의 기본값 중
+# "이 랩에서 바꿔야 하는 것"만 덮어쓰는(override) 파일이다.
+#   helm install airflow apache-airflow/airflow -f helm/airflow-values.yaml
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1) Executor
+#   LocalExecutor: 스케줄러 프로세스 안에서 task를 병렬 실행. Celery/Redis 불필요.
+#   → 로컬 학습용으로 가장 단순하고 적합하다.
+# -----------------------------------------------------------------------------
+executor: LocalExecutor
+
+# -----------------------------------------------------------------------------
+# 2) 커스텀 Airflow 이미지
+#   docker build로 만든 이미지를 k3d 클러스터에 import한 뒤 사용한다.
+#     docker build -t airflow-k8s-practice:local .
+#     k3d image import airflow-k8s-practice:local -c airflow-lab
+#
+#   pullPolicy: IfNotPresent
+#     → 클러스터에 이미 import된 로컬 이미지를 쓰고, 레지스트리에서 새로 받지 않는다.
+#       (로컬 이미지에는 :latest 태그를 쓰지 말 것. latest는 Always pull이 기본이라 실패한다)
+# -----------------------------------------------------------------------------
+images:
+  airflow:
+    repository: airflow-k8s-practice
+    tag: local
+    pullPolicy: IfNotPresent
+
+# 예제 DAG를 UI에서 숨겨 우리 DAG만 깔끔하게 보이도록 한다.
+config:
+  core:
+    load_examples: 'False'
+
+# -----------------------------------------------------------------------------
+# 3) DAG 배포 방식: GitSync
+#   - persistence.enabled=false : PVC(영구 볼륨)로 DAG를 관리하지 않는다.
+#   - gitSync.enabled=true      : 사이드카 컨테이너가 주기적으로 git pull 해서
+#                                  최신 DAG를 컨테이너에 동기화한다.
+# -----------------------------------------------------------------------------
+dags:
+  persistence:
+    enabled: false
+
+  gitSync:
+    enabled: true
+
+    # ── public repo (HTTPS) 방식 ── 자격증명 없이 바로 clone 가능 (기본 구성)
+    repo: https://github.com/hyochangsung/airflow-k8s-practice.git
+    branch: main
+    rev: HEAD
+
+    # repo 루트가 아니라 dags/ 폴더만 DAG 폴더로 인식시킨다.
+    subPath: "dags"
+
+    # git 히스토리를 얕게(depth=1) 받아 동기화를 가볍게.
+    depth: 1
+
+    # 동기화 주기 (기본 60s). 실습 중에는 짧게 두면 push 반영이 빠르다.
+    period: 20s
+    wait: 20
+
+    # ────────────────────────────────────────────────────────────────────────
+    # (Optional) private repo (SSH) 방식 — README의 "Private repo" 섹션 참고.
+    # public HTTPS로 먼저 성공시킨 뒤, 아래 방식으로 바꿔 실험해볼 것.
+    #
+    #   1) SSH 키 생성 후 공개키를 GitHub repo의 Deploy keys에 등록
+    #   2) 개인키를 k8s Secret으로 등록:
+    #        kubectl create secret generic airflow-git-ssh-secret \
+    #          --from-file=gitSshKey=/path/to/id_ed25519 -n airflow
+    #   3) 아래 값으로 교체:
+    #
+    # repo: git@github.com:hyochangsung/airflow-k8s-practice.git
+    # sshKeySecret: airflow-git-ssh-secret
+    # # 첫 접속 시 host key 검증 실패를 막으려면 knownHosts를 넣거나 아래로 우회:
+    # # (학습용). 운영에서는 knownHosts를 명시적으로 지정하는 것을 권장.
+    # ────────────────────────────────────────────────────────────────────────
+
+# -----------------------------------------------------------------------------
+# 4) 리소스 절약 (로컬 랩탑 환경 고려)
+#   실습에 불필요한 컴포넌트를 꺼서 클러스터 부담을 줄인다.
+# -----------------------------------------------------------------------------
+statsd:
+  enabled: false
+
+# LocalExecutor에서는 Celery workers / redis / flower 가 필요 없다.
+# (executor=LocalExecutor면 차트가 자동으로 비활성화하지만, 명시적으로 남겨둔다)
+flower:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# 5) (선택) webserver secret key 고정
+#   설정하지 않으면 차트가 랜덤 생성 → helm upgrade 때마다 값이 바뀌어
+#   웹서버가 재시작 루프에 빠질 수 있다. 학습용이라 우선 주석 처리해 두지만,
+#   upgrade를 자주 한다면 아래처럼 Secret을 만들어 고정하는 것을 권장.
+#
+#     kubectl create secret generic airflow-webserver-secret \
+#       --from-literal=webserver-secret-key="$(openssl rand -hex 30)" -n airflow
+#
+# webserverSecretKeySecretName: airflow-webserver-secret
